@@ -46,7 +46,7 @@ const app = {
   template: `
   <div class="page">
     <header class="topbar">
-      <div class="brand-lockup"><div class="ball-set" aria-label="五颗球是一套整体标志"><i class="ball yellow"><b></b></i><i class="ball pink"><b></b></i><i class="ball orange"><b></b></i><i class="ball blue"><b></b></i><i class="ball green"><b></b></i></div><div><strong>schedule</strong><small>MY STUDY NOTEBOOK</small></div></div>
+      <div class="brand-lockup"><div class="ball-set" aria-label="五颗球是一套整体标志"><i class="ball yellow"><b></b><em></em></i><i class="ball pink"><b></b><em></em></i><i class="ball orange"><b></b><em></em></i><i class="ball blue"><b></b><em></em></i><i class="ball green"><b></b><em></em></i></div><div><strong>schedule</strong><small>MY STUDY NOTEBOOK</small></div></div>
       <div class="top-note">把每一天，写成自己的小故事 <span>✦</span></div>
     </header>
     <main>
