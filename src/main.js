@@ -1,10 +1,10 @@
-import { createApp, computed, ref, watch } from 'vue/dist/vue.esm-bundler.js'
+import { createApp, computed, nextTick, ref, watch } from 'vue/dist/vue.esm-bundler.js'
 import './schedule.css'
 
-const storageKey = 'study-notebook-v2'
+const legacyKey = 'study-notebook-v2'
 const localDay = d => new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,10)
 const today = localDay(new Date())
-const starter = {
+const starter = () => ({
   plans: {
     [today]: [
       { id: 1, time: '08:30', title: '英语听力 30 分钟', note: '通勤时完成一组练习', done: false },
@@ -13,12 +13,66 @@ const starter = {
     ]
   },
   journals: { [today]: '今天想把时间留给真正重要的事情。' }
+})
+function legacyNotebook() {
+  if (localStorage.getItem(legacyKey + '-claimed')) return null
+  try { const data = JSON.parse(localStorage.getItem(legacyKey)); return data?.plans && data?.journals ? data : null } catch { return null }
 }
-function load() { try { return JSON.parse(localStorage.getItem(storageKey)) || starter } catch { return starter } }
+
+async function api(method, path, body) {
+  let res
+  try { res = await fetch('/api/' + path, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body && JSON.stringify(body) }) }
+  catch { throw Object.assign(new Error('无法连接服务器，请确认后端已启动'), { status: 0 }) }
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw Object.assign(new Error(data.error || (res.status >= 500 ? '无法连接服务器，请确认后端已启动' : '请求失败')), { status: res.status })
+  return data
+}
+
+const AuthScreen = {
+  props: { notice: String },
+  emits: ['authed'],
+  setup(props, { emit }) {
+    const mode = ref('login')
+    const form = ref({ username: '', password: '', confirm: '' })
+    const error = ref(props.notice || '')
+    const busy = ref(false)
+    function switchMode(next) { mode.value = next; error.value = ''; form.value.password = ''; form.value.confirm = '' }
+    async function submit() {
+      error.value = ''
+      if (mode.value === 'register' && form.value.password !== form.value.confirm) { error.value = '两次输入的密码不一致'; return }
+      busy.value = true
+      try { const { user } = await api('POST', mode.value, { username: form.value.username.trim(), password: form.value.password }); emit('authed', user) }
+      catch (e) { error.value = e.message }
+      finally { busy.value = false }
+    }
+    return { mode, form, error, busy, switchMode, submit }
+  },
+  template: `
+  <div class="auth-page">
+    <div class="auth-card">
+      <img class="sticker auth-sticker" src="./assets/stickers/sleep.png" alt="">
+      <img class="auth-logo" src="./assets/five-balls-logo.png" alt="schedule 五颗球标志">
+      <h1>{{ mode === 'login' ? '欢迎回来' : '创建你的笔记本' }}</h1>
+      <p class="auth-sub">{{ mode === 'login' ? '登录后继续书写今天的计划与札记。' : '注册一个账号，计划和札记会保存在服务器上，换设备也能接着写。' }}</p>
+      <div class="auth-tabs" role="tablist"><button type="button" role="tab" :aria-selected="mode === 'login'" :class="{ active: mode === 'login' }" @click="switchMode('login')">登录</button><button type="button" role="tab" :aria-selected="mode === 'register'" :class="{ active: mode === 'register' }" @click="switchMode('register')">注册</button></div>
+      <form class="auth-form" @submit.prevent="submit">
+        <label>用户名<input v-model="form.username" autocomplete="username" required minlength="2" maxlength="32" autofocus></label>
+        <label>密码<input v-model="form.password" type="password" :autocomplete="mode === 'login' ? 'current-password' : 'new-password'" required :minlength="mode === 'register' ? 8 : 1" maxlength="128" :placeholder="mode === 'register' ? '至少 8 位' : ''"></label>
+        <label v-if="mode === 'register'">确认密码<input v-model="form.confirm" type="password" autocomplete="new-password" required minlength="8" maxlength="128"></label>
+        <p v-if="error" class="auth-error" role="alert">{{ error }}</p>
+        <button class="auth-submit" :disabled="busy">{{ busy ? '请稍候…' : (mode === 'login' ? '登录' : '注册并进入') }}</button>
+      </form>
+    </div>
+  </div>`
+}
 
 const app = {
+  components: { AuthScreen },
   setup() {
-    const book = ref(load())
+    const phase = ref('checking')
+    const user = ref(null)
+    const notice = ref('')
+    const book = ref(starter())
     const selected = ref(today)
     const showForm = ref(false)
     const newTask = ref({ time: '09:00', title: '', note: '' })
@@ -31,44 +85,85 @@ const app = {
     const doneCount = computed(() => tasks.value.filter(task => task.done).length)
     const progress = computed(() => tasks.value.length ? Math.round(doneCount.value / tasks.value.length * 100) : 0)
     const dates = computed(() => Array.from({ length: 7 }, (_, i) => { const date = new Date(); date.setDate(date.getDate() + i - 3); return localDay(date) }))
-    const apiUrl = ref('http://localhost:3001')
-    const secret = ref('')
-    const connected = ref(false)
-    const syncStatus = ref('保存在此浏览器')
-    const settings = ref(false)
-    let revision = 0, timer, loading = false, saving = false, pending = false
-    async function request(method, body) {
-      const res = await fetch(apiUrl.value.replace(/\/$/, '') + '/api/notebook', {method, headers: {Authorization: 'Bearer '+secret.value, 'Content-Type':'application/json'}, body: body && JSON.stringify(body)})
-      if (!res.ok) throw new Error(res.status === 409 ? '其他设备已修改，请重新连接后确认内容' : '连接或保存失败，请检查服务和密钥')
-      return res.json()
+    const initial = computed(() => user.value?.username.slice(0, 1) || '')
+    const syncStatus = ref('')
+    let revision = 0, timer, loading = true, saving = false, pending = false, dirty = false
+
+    async function replaceBook(next) {
+      loading = true
+      book.value = next
+      await nextTick()
+      loading = false
+    }
+    function signedOut(message) {
+      clearTimeout(timer)
+      dirty = false
+      notice.value = message
+      user.value = null
+      phase.value = 'auth'
+    }
+    async function enter(u) {
+      user.value = u
+      notice.value = ''
+      try {
+        const result = await api('GET', 'notebook')
+        revision = result.revision
+        const legacy = result.book ? null : legacyNotebook()
+        selected.value = today
+        phase.value = 'app'
+        await replaceBook(result.book || legacy || starter())
+        if (result.book) syncStatus.value = '已同步'
+        else if (await saveRemote() && legacy) localStorage.setItem(legacyKey + '-claimed', '1')
+      } catch (e) {
+        signedOut(e.status === 401 ? '登录已过期，请重新登录' : e.message)
+      }
     }
     async function saveRemote() {
-      if (!connected.value) return
-      if (saving) {pending=true;return}
-      saving=true; syncStatus.value='正在保存…'
-      try {const result=await request('PUT',{book:book.value,revision});revision=result.revision;syncStatus.value='已保存到本地后端'}
-      catch(e){connected.value=false;syncStatus.value=e.message+'；浏览器草稿已保留'}
-      finally{saving=false;if(pending){pending=false;saveRemote()}}
-    }
-    async function connect() {
-      if(saving)return
-      clearTimeout(timer);connected.value=false;loading=true
+      if (saving) { pending = true; return false }
+      clearTimeout(timer)
+      saving = true
+      syncStatus.value = '正在保存…'
       try {
-        const result=await request('GET')
-        if(result.book && !confirm('载入后端笔记？当前浏览器内容将另存为备份。'))return
-        localStorage.setItem(storageKey+'-backup',JSON.stringify(book.value))
-        revision=result.revision
-        if(result.book)book.value=result.book
-        await Promise.resolve()
-        connected.value=true;syncStatus.value='已连接本地后端';settings.value=false
-        if(!result.book)await saveRemote()
-      }catch(e){syncStatus.value=e.message}
-      finally{loading=false}
+        const result = await api('PUT', 'notebook', { book: book.value, revision })
+        revision = result.revision
+        dirty = false
+        syncStatus.value = '已保存'
+        return true
+      } catch (e) {
+        if (e.status === 401) signedOut('登录已过期，请重新登录')
+        else if (e.status === 409) {
+          const latest = await api('GET', 'notebook').catch(() => null)
+          if (latest) { revision = latest.revision; dirty = false; await replaceBook(latest.book || starter()) }
+          syncStatus.value = '笔记已在其他设备上更新，已载入最新内容'
+        } else {
+          syncStatus.value = e.message + '，稍后自动重试'
+          timer = setTimeout(saveRemote, 5000)
+        }
+        return false
+      } finally {
+        saving = false
+        if (pending) { pending = false; saveRemote() }
+      }
     }
-    watch(book, value => {
-      try{localStorage.setItem(storageKey, JSON.stringify(value))}catch{syncStatus.value='浏览器保存失败，请检查存储空间'}
-      if(!loading && connected.value){clearTimeout(timer);timer=setTimeout(saveRemote,500)}
+    watch(book, () => {
+      if (loading || phase.value !== 'app') return
+      dirty = true
+      syncStatus.value = '有未保存的修改'
+      clearTimeout(timer)
+      timer = setTimeout(saveRemote, 600)
     }, { deep: true })
+    window.addEventListener('pagehide', () => {
+      if (dirty && !saving) fetch('/api/notebook', { method: 'PUT', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ book: book.value, revision }) })
+    })
+    async function logout() {
+      if (dirty) await saveRemote()
+      await api('POST', 'logout', {}).catch(() => {})
+      signedOut('')
+      await replaceBook(starter())
+      revision = 0
+    }
+    api('GET', 'me').then(r => enter(r.user)).catch(e => signedOut(e.status === 401 ? '' : e.message))
+
     const dayName = value => new Date(`${value}T12:00:00`).toLocaleDateString('zh-CN', { weekday: 'short' })
     const dayNumber = value => new Date(`${value}T12:00:00`).getDate()
     function addTask() {
@@ -80,17 +175,18 @@ const app = {
     }
     function removeTask(id) { book.value.plans[selected.value] = (book.value.plans[selected.value] || []).filter(task => task.id !== id) }
     function clearDay() { if (confirm('清除今天的全部学习计划？')) book.value.plans[selected.value] = [] }
-    return { mood, apiUrl, secret, connected, syncStatus, settings, connect, selected, showForm, newTask, dateLabel, weekday, tasks, journal, doneCount, progress, dates, dayName, dayNumber, addTask, removeTask, clearDay }
+    return { phase, user, notice, initial, enter, logout, mood, syncStatus, selected, showForm, newTask, dateLabel, weekday, tasks, journal, doneCount, progress, dates, dayName, dayNumber, addTask, removeTask, clearDay }
   },
   template: `
-  <div class="page">
+  <div v-if="phase === 'checking'" class="auth-page"><p class="auth-loading">正在打开笔记本…</p></div>
+  <auth-screen v-else-if="phase === 'auth'" :notice="notice" @authed="enter"></auth-screen>
+  <div v-else class="page">
     <header class="topbar">
       <div class="brand-lockup"><img class="ball-logo" src="./assets/five-balls-logo.png" alt="五颗不同颜色的球形角色整体标志"><div><strong>schedule</strong><small>MY STUDY NOTEBOOK</small></div></div>
-      <div class="top-note">把每一天，写成自己的小故事 <span>✦</span></div>
+      <div class="top-right"><div class="top-note">把每一天，写成自己的小故事 <span>✦</span></div><div class="user-chip"><span class="avatar" aria-hidden="true">{{ initial }}</span><span class="user-name">{{ user.username }}</span><button class="logout" @click="logout">退出登录</button></div></div>
     </header>
     <main>
-      <div class="sync-toolbar"><span role="status">{{ syncStatus }}</span><button @click="settings=!settings">连接存储</button><label>翻到这一天 <input type="date" v-model="selected" required aria-label="选择日期"></label></div>
-      <form v-if="settings" class="connection-form" @submit.prevent="connect"><label>后端地址<input v-model="apiUrl" type="url" required></label><label>访问密钥<input v-model="secret" type="password" required minlength="24" autocomplete="off"></label><button>连接并载入</button><small>密钥仅用于当前页面连接。后端保存计划和日记，浏览器同时保留草稿。</small></form>
+      <div class="sync-toolbar"><span role="status">{{ syncStatus }}</span><label>翻到这一天 <input type="date" v-model="selected" required aria-label="选择日期"></label></div>
       <section class="intro"><div class="eyebrow">A NOTEBOOK FOR LITTLE PLANS <i></i></div><h1>今天的页角，<em>留给你。</em></h1><p>写下时间表，也写下此刻的心情。每完成一件小事，就为这本笔记添上一颗星。</p><span class="scribble">✎</span><img class="sticker sticker-sleep" src="./assets/stickers/sleep.png" alt="睡觉手绘贴纸"><img class="sticker sticker-heart" src="./assets/stickers/heart.png" alt="爱心对话框贴纸"><img class="sticker sticker-bird" src="./assets/stickers/bird.png" alt="蓝色小鸟贴纸"></section>
       <section class="notebook-shell">
         <aside class="book-spine"><div class="spine-title">MY<br>DAILY<br>NOTE</div><div class="spine-mark">✳</div><div class="spine-lines"></div><div class="spine-year">2026</div></aside>
