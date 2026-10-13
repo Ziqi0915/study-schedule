@@ -182,15 +182,15 @@ const app = {
   <auth-screen v-else-if="phase === 'auth'" :notice="notice" @authed="enter"></auth-screen>
   <div v-else class="page">
     <header class="topbar">
-      <div class="brand-lockup"><img class="ball-logo" src="./assets/five-balls-logo.png" alt="五颗不同颜色的球形角色整体标志"><div><strong>schedule</strong><small>MY STUDY NOTEBOOK</small></div></div>
-      <div class="top-right"><div class="top-note">把每一天，写成自己的小故事 <span>✦</span></div><div class="user-chip"><span class="avatar" aria-hidden="true">{{ initial }}</span><span class="user-name">{{ user.username }}</span><button class="logout" @click="logout">退出登录</button></div></div>
+      <div class="brand-lockup"><img class="ball-logo" src="./assets/five-balls-logo.png" alt="五颗不同颜色的球形角色整体标志"><div><strong>schedule</strong><small>计划 · 日记</small></div></div>
+      <div class="top-right"><div class="top-note">慢慢来，也算进步。 <span>✦</span></div><div class="user-chip"><span class="avatar" aria-hidden="true">{{ initial }}</span><span class="user-name">{{ user.username }}</span><button class="logout" @click="logout">退出登录</button></div></div>
     </header>
     <main>
       <div class="sync-toolbar"><span role="status">{{ syncStatus }}</span><label>翻到这一天 <input type="date" v-model="selected" required aria-label="选择日期"></label></div>
-      <section class="intro"><div class="eyebrow">A NOTEBOOK FOR LITTLE PLANS <i></i></div><h1>今天的页角，<em>留给你。</em></h1><p>写下时间表，也写下此刻的心情。每完成一件小事，就为这本笔记添上一颗星。</p><span class="scribble">✎</span><img class="sticker sticker-sleep" src="./assets/stickers/sleep.png" alt="睡觉手绘贴纸"><img class="sticker sticker-heart" src="./assets/stickers/heart.png" alt="爱心对话框贴纸"><img class="sticker sticker-bird" src="./assets/stickers/bird.png" alt="蓝色小鸟贴纸"></section>
+      <section class="intro"><div class="eyebrow">每天一点点 <i></i></div><h1>今天的页角，<em>留给你。</em></h1><p>记下计划，也留住今天的心情。</p><span class="scribble">✎</span><img class="sticker sticker-sleep" src="./assets/stickers/sleep.png" alt="睡觉小贴纸"><img class="sticker sticker-heart" src="./assets/stickers/heart.png" alt="爱心对话框贴纸"><img class="sticker sticker-bird" src="./assets/stickers/bird.png" alt="蓝色小鸟贴纸"><img class="sticker sticker-dance" src="./assets/stickers/dance.png" alt="跳舞小人贴纸"><img class="sticker sticker-pink" src="./assets/stickers/pink-character.png" alt="粉色小角色贴纸"></section>
       <section class="notebook-shell">
-        <aside class="book-spine"><div class="spine-title">MY<br>DAILY<br>NOTE</div><div class="spine-mark">✳</div><div class="spine-lines"></div><div class="spine-year">2026</div></aside>
-        <div class="notebook-pages">
+        <aside class="book-spine" aria-label="笔记本装饰"><div class="spine-title" aria-hidden="true">✿</div><div class="spine-mark">✳</div><div class="spine-lines"></div><div class="spine-year">♡</div></aside>
+        <Transition name="page-turn" mode="out-in"><div class="notebook-pages" :key="selected">
           <div class="page-column plan-page">
             <div class="page-heading"><div><span class="date-kicker">{{ weekday }} · {{ dateLabel }}</span><h2>今日计划</h2></div><button class="clear" @click="clearDay">清除</button></div>
             <div class="week-tabs"><button v-for="date in dates" :key="date" :class="{active: selected === date}" @click="selected = date"><span>{{ dayName(date) }}</span><b>{{ dayNumber(date) }}</b></button></div>
@@ -198,16 +198,16 @@ const app = {
             <div class="plans"><div v-if="!tasks.length" class="empty">这一页还很空，写下一个小目标吧。</div><article v-for="task in tasks" :key="task.id" class="plan-row" :class="{done: task.done}"><button class="check" @click="task.done = !task.done">{{ task.done ? '✓' : '' }}</button><time>{{ task.time }}</time><div><h3>{{ task.title }}</h3><p>{{ task.note }}</p></div><button class="remove" @click="removeTask(task.id)">×</button></article></div>
             <button class="add-plan" @click="showForm = !showForm">＋ 添加一个时间段</button>
             <div v-if="showForm" class="task-form"><input v-model="newTask.time" type="time"><input v-model="newTask.title" placeholder="要完成什么？" @keyup.enter="addTask"><input v-model="newTask.note" placeholder="给自己的一句提示（可选）" @keyup.enter="addTask"><button @click="addTask">写进计划</button></div>
-            <div class="page-doodle">✦　✧　✦<small>one page at a time</small></div>
+            <div class="page-doodle">✦　✧　✦<small>今天也加油</small></div>
           </div>
           <div class="page-column diary-page">
-            <div class="page-heading"><div><span class="date-kicker">DEAR DIARY · {{ dateLabel }}</span><h2>今日札记</h2></div><span class="page-number">02</span></div>
-            <div class="diary-rule"><span>亲爱的自己：</span></div><textarea v-model="journal" placeholder="今天发生了什么？\n有什么值得记住的瞬间？\n慢慢写，不需要完美。"></textarea><div class="mood-row"><span>今天的心情</span><button v-for="m in ['☀️','🌱','🌙','☁️','✦']" :key="m" :aria-pressed="mood===m" :class="{chosen:mood===m}" @click="mood=m">{{m}}</button></div><div class="diary-sticker"><img class="fruit-sticker" src="./assets/stickers/green-character.png" alt="青苹果贴纸"><span>keep going,<br><em>you are doing well.</em></span></div><div class="bottom-line">写于 {{ weekday }}　♡</div>
+            <div class="page-heading"><div><span class="date-kicker">写给自己 · {{ dateLabel }}</span><h2>今日札记</h2></div><span class="page-number">02</span></div>
+            <div class="diary-rule"><span>亲爱的自己：</span></div><textarea v-model="journal" placeholder="今天发生了什么？\n有什么值得记住的事？\n慢慢写就好。"></textarea><div class="mood-row"><span>今天的心情</span><button v-for="m in ['☀️','🌱','🌙','☁️','✦']" :key="m" :aria-pressed="mood===m" :class="{chosen:mood===m}" @click="mood=m">{{m}}</button></div><div class="diary-sticker"><img class="fruit-sticker" src="./assets/stickers/green-character.png" alt="青苹果贴纸"><span>今天也要<br><em>好好生活</em></span></div><div class="bottom-line">写于 {{ weekday }}　♡</div>
           </div>
-        </div>
+        </div></Transition>
       </section>
     </main>
-    <footer><span>schedule · ONE NOTEBOOK, EVERY DAY</span><span>留一点空白，也是一种安排 <b>✿</b></span></footer>
+    <footer><span>schedule · 每天一页</span><span>今天也辛苦了 <b>✿</b></span></footer>
   </div>`
 }
 createApp(app).mount('#app')

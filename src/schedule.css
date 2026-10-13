@@ -30,3 +30,34 @@ button{cursor:pointer}button:focus-visible,input:focus-visible,textarea:focus-vi
 .auth-form{display:grid;gap:14px}.auth-form label{display:grid;gap:6px;font-size:12px}.auth-form input{background:#fff;border:1px solid #a89d8266;border-radius:8px;padding:11px 12px;color:#414f5d;font-size:14px}.auth-form input::placeholder{color:#414f5d66}.auth-error{margin:0;font-size:12px;line-height:1.6;color:#9c3f35;background:#f3ddd7;border-radius:6px;padding:8px 10px}.auth-submit{margin-top:6px;border:0;border-radius:8px;background:#5b9c73;color:#f5f3f1;padding:12px;font-size:14px;font-weight:600}.auth-submit:disabled{opacity:.6;cursor:wait}.auth-sticker{width:84px;right:-30px;top:-38px;transform:rotate(8deg)}
 .top-right{display:flex;align-items:center;gap:22px}.user-chip{display:flex;align-items:center;gap:9px;font-size:12px;color:#414f5d}.user-chip .avatar{width:30px;height:30px;border-radius:50%;background:#c2ce8c;display:grid;place-items:center;font-weight:700;text-transform:uppercase}.logout{border:1px solid #a89d8266;background:#f5f3f1;color:#414f5d;border-radius:7px;padding:6px 11px;font-size:11px}
 @media(max-width:760px){.auth-card{padding:32px 22px 26px;border-width:6px}.auth-sticker{width:60px;right:-6px;top:-30px}.user-name{display:none}}
+
+/* Calm down repeated headings, bring the cutout stickers into the margins,
+   and give date changes the weight of turning a paper spread. */
+.brand-lockup small{font-size:10px;letter-spacing:1px}
+.intro .eyebrow{font-size:11px;letter-spacing:1px}
+.intro{min-height:150px}
+.intro p{font-size:14px;line-height:1.8}
+.spine-title{font-family:inherit;font-size:20px;letter-spacing:0}
+.spine-year{font-size:16px;letter-spacing:0}
+.page-doodle small{font:10px 'Noto Serif SC';letter-spacing:1px}
+.date-kicker{letter-spacing:.5px}
+.diary-page .date-kicker{font-size:10px;letter-spacing:.5px}
+.notebook-shell{perspective:1600px}
+.notebook-pages{transform-origin:left center;backface-visibility:hidden}
+.page-turn-enter-active{animation:paperTurnIn .58s cubic-bezier(.22,.72,.2,1) both;transform-origin:left center;backface-visibility:hidden}
+.page-turn-leave-active{animation:paperTurnOut .18s ease-in both;transform-origin:left center;backface-visibility:hidden;pointer-events:none}
+@keyframes paperTurnIn{from{opacity:.78;transform:rotateY(-24deg) translateX(10px);filter:drop-shadow(-14px 4px 8px #414f5d22)}to{opacity:1;transform:rotateY(0) translateX(0);filter:none}}
+@keyframes paperTurnOut{to{opacity:.65;transform:rotateY(8deg) translateX(-3px)}}
+.sticker-dance{width:58px;right:8%;bottom:-13px;transform:rotate(7deg)}
+.sticker-pink{width:58px;right:37%;bottom:-10px;transform:rotate(-8deg)}
+.intro .sticker-bird{display:block}
+@media(max-width:760px){
+  .intro{min-height:175px;padding-right:0}
+  .intro .sticker-bird{display:block;left:0;bottom:-12px;width:54px}
+  .sticker-dance{width:43px;right:4%;bottom:-11px}
+  .sticker-pink{width:44px;right:32%;bottom:-8px}
+  .page-turn-enter-active{animation-name:paperTurnInMobile;transform-origin:top center}
+  .page-turn-leave-active{animation:none;opacity:0}
+}
+@keyframes paperTurnInMobile{from{opacity:.7;transform:rotateX(-8deg) translateY(8px)}to{opacity:1;transform:rotateX(0) translateY(0)}}
+@media(prefers-reduced-motion:reduce){.page-turn-enter-active,.page-turn-leave-active{animation:none}.progress-line i em{transition:none}}
