@@ -50,7 +50,7 @@ const app = {
       <div class="top-note">把每一天，写成自己的小故事 <span>✦</span></div>
     </header>
     <main>
-      <section class="intro"><div class="eyebrow">A NOTEBOOK FOR LITTLE PLANS <i></i></div><h1>今天的页角，<em>留给你。</em></h1><p>写下时间表，也写下此刻的心情。每完成一件小事，就为这本笔记添上一颗星。</p><span class="scribble">✎</span></section>
+      <section class="intro"><div class="eyebrow">A NOTEBOOK FOR LITTLE PLANS <i></i></div><h1>今天的页角，<em>留给你。</em></h1><p>写下时间表，也写下此刻的心情。每完成一件小事，就为这本笔记添上一颗星。</p><span class="scribble">✎</span><img class="sticker sticker-sleep" src="/assets/stickers/sleep.png" alt="睡觉手绘贴纸"><img class="sticker sticker-heart" src="/assets/stickers/heart.png" alt="爱心对话框贴纸"><img class="sticker sticker-bird" src="/assets/stickers/bird.png" alt="蓝色小鸟贴纸"></section>
       <section class="notebook-shell">
         <aside class="book-spine"><div class="spine-title">MY<br>DAILY<br>NOTE</div><div class="spine-mark">✳</div><div class="spine-lines"></div><div class="spine-year">2026</div></aside>
         <div class="notebook-pages">
