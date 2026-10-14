@@ -15,6 +15,8 @@ export function starter() {
       ],
     },
     journals: { [today]: '今天想把时间留给真正重要的事情。' },
+    moods: {},
+    stickers: {},
   }
 }
 

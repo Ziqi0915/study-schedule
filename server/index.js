@@ -4,6 +4,7 @@ import { mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { createHash, randomBytes, scrypt, timingSafeEqual } from 'node:crypto'
 import { promisify } from 'node:util'
+import { STICKER_KEYS } from '../src/stickerCatalog.js'
 
 const scryptAsync = promisify(scrypt)
 const path = process.env.DATABASE_PATH || './data/notebook.sqlite'
@@ -74,7 +75,19 @@ function validBook(book) {
   if (!isMap(book) || !isMap(book.plans) || !isMap(book.journals)) return false
   if (book.moods !== undefined && (!isMap(book.moods) || Object.values(book.moods).some(v => typeof v !== 'string'))) return false
   if (Object.values(book.journals).some(v => typeof v !== 'string')) return false
-  return Object.values(book.plans).every(list => Array.isArray(list) && list.every(t => isMap(t) && typeof t.title === 'string' && typeof t.time === 'string' && typeof t.done === 'boolean'))
+  if (!Object.values(book.plans).every(list => Array.isArray(list) && list.every(t => isMap(t) && typeof t.title === 'string' && typeof t.time === 'string' && typeof t.done === 'boolean'))) return false
+  if (book.stickers === undefined) return true
+  if (!isMap(book.stickers)) return false
+  return Object.entries(book.stickers).every(([date, list]) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Array.isArray(list) || list.length > 30) return false
+    return list.every(sticker => isMap(sticker) &&
+      typeof sticker.id === 'string' && /^[\w-]{1,80}$/.test(sticker.id) &&
+      STICKER_KEYS.has(sticker.key) &&
+      Number.isFinite(sticker.x) && sticker.x >= 0 && sticker.x <= 100 &&
+      Number.isFinite(sticker.y) && sticker.y >= 0 && sticker.y <= 100 &&
+      Number.isFinite(sticker.size) && sticker.size >= 8 && sticker.size <= 35 &&
+      Number.isFinite(sticker.rotation) && sticker.rotation >= -30 && sticker.rotation <= 30)
+  })
 }
 function readCredentials(body) {
   const username = typeof body.username === 'string' ? body.username.trim() : ''

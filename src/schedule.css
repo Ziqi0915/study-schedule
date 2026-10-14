@@ -61,3 +61,46 @@ button{cursor:pointer}button:focus-visible,input:focus-visible,textarea:focus-vi
 }
 @keyframes paperTurnInMobile{from{opacity:.7;transform:rotateX(-8deg) translateY(8px)}to{opacity:1;transform:rotateX(0) translateY(0)}}
 @media(prefers-reduced-motion:reduce){.page-turn-enter-active,.page-turn-leave-active{animation:none}.progress-line i em{transition:none}}
+
+/* Daily scrapbook stickers: transparent cutouts sit on a small paper canvas. */
+.diary-page .page-heading{margin-bottom:8px}
+.sticker-section-heading{position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;margin:4px 0 8px;color:#414f5d;font-size:11px;font-weight:600}
+.sticker-section-heading small{margin-left:5px;color:#414f5d88;font-size:9px;font-weight:400}
+.add-sticker{border:1px solid #5b9c7377;border-radius:7px;background:#d3e9f4;color:#414f5d;padding:7px 11px;font-size:10px;cursor:pointer}
+.add-sticker:hover{background:#c2ce8c}
+.add-sticker:disabled{opacity:.55;cursor:not-allowed}
+.sticker-board{position:relative;z-index:1;height:176px;overflow:hidden;border:1px dashed #a89d82aa;border-radius:9px;background-color:#d3e9f466;background-image:radial-gradient(#5b9c7318 1px,transparent 1px);background-size:14px 14px;touch-action:pan-y}
+.sticker-board-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#5b6e77a8;pointer-events:none}
+.sticker-board-empty span{font-size:26px;color:#5b9c7388}
+.sticker-board-empty p{margin:4px 0 0;font-size:10px}
+.placed-sticker{position:absolute;z-index:2;min-width:32px;max-width:28%;max-height:86%;cursor:grab;touch-action:none;user-select:none}
+.placed-sticker:active{cursor:grabbing;z-index:4}
+.placed-sticker img{display:block;width:100%;max-height:138px;object-fit:contain;pointer-events:none;filter:drop-shadow(0 3px 2px #414f5d24)}
+.placed-sticker-remove{position:absolute;top:-5px;right:-5px;width:18px;height:18px;padding:0;border:1px solid #f8f8f5;border-radius:50%;background:#414f5d;color:#f8f8f5;font-size:14px;line-height:15px;cursor:pointer;box-shadow:0 1px 3px #414f5d44}
+.journal-label{position:relative;z-index:1;display:block;margin:12px 0 3px;color:#414f5d;font-size:10px}
+.diary-page textarea{height:190px;padding-top:6px}
+.diary-page .mood-row{margin-top:7px}
+.sticker-picker-backdrop{position:fixed;z-index:20;inset:0;display:grid;place-items:center;padding:16px;background:#26343d88;backdrop-filter:blur(3px)}
+.sticker-picker{width:min(560px,100%);max-height:min(700px,90vh);display:flex;flex-direction:column;overflow:hidden;border:1px solid #f8f8f5;border-radius:16px;background:#f8f8f5;color:#414f5d;box-shadow:0 20px 70px #26343d44}
+.sticker-picker-heading{display:flex;align-items:center;justify-content:space-between;padding:20px 22px 13px}
+.sticker-picker-heading h3{margin:4px 0 0;font:600 20px 'Noto Serif SC';color:#414f5d}
+.sticker-picker-close{width:34px;height:34px;border:0;border-radius:50%;background:#d3e9f4;color:#414f5d;font-size:24px;line-height:1;cursor:pointer}
+.sticker-picker-tabs{display:flex;gap:8px;padding:0 22px 13px;border-bottom:1px solid #a89d8244}
+.sticker-picker-tabs button{border:1px solid #a89d8266;border-radius:18px;background:transparent;color:#414f5d;padding:7px 13px;font-size:11px;cursor:pointer}
+.sticker-picker-tabs button.active{border-color:#5b9c73;background:#c2ce8c;color:#414f5d}
+.sticker-picker-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;overflow:auto;padding:14px 22px}
+.sticker-option{min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px;border:1px solid transparent;border-radius:9px;background:transparent;color:#414f5d;padding:6px 3px;font-size:9px;cursor:pointer}
+.sticker-option:hover,.sticker-option:focus-visible{border-color:#5b9c73;background:#d3e9f477;outline:0}
+.sticker-option-image{width:58px;height:58px;display:grid;place-items:center;border-radius:8px;background-color:#d3e9f455;background-image:linear-gradient(45deg,#5b9c7310 25%,transparent 25%,transparent 75%,#5b9c7310 75%),linear-gradient(45deg,#5b9c7310 25%,transparent 25%,transparent 75%,#5b9c7310 75%);background-position:0 0,7px 7px;background-size:14px 14px}
+.sticker-option img{width:52px;height:52px;object-fit:contain}
+.sticker-picker-hint{margin:0;padding:10px 22px 15px;border-top:1px solid #a89d8244;color:#414f5d99;font-size:10px}
+@media(max-width:760px){
+  .sticker-board{height:160px}
+  .sticker-picker{max-height:86vh;border-radius:12px}
+  .sticker-picker-heading{padding:16px 16px 11px}
+  .sticker-picker-tabs{padding:0 16px 11px}
+  .sticker-picker-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;padding:10px 12px}
+  .sticker-option-image{width:54px;height:54px}
+  .sticker-option img{width:48px;height:48px}
+  .sticker-picker-hint{padding:9px 16px 12px}
+}

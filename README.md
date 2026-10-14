@@ -8,6 +8,7 @@
 - 添加不同时间段的学习计划
 - 勾选完成、删除和清除当天计划
 - 记录每日札记与心情
+- 从 50 张透明贴纸中挑选、拖动和删除装饰，每天单独保存
 - 账号注册与登录，计划和日记自动保存到服务器
 - 五颗不同颜色的球形角色作为一套整体 Logo
 - 纸张、舞台幕布、贴纸和手绘线条风格
@@ -57,6 +58,8 @@ npm run preview
 可选配置：复制 `.env.example` 为 `.env` 后修改。`ALLOW_REGISTRATION=false` 关闭新用户注册；`SESSION_DAYS` 调整登录有效期；通过 HTTPS 部署时设置 `COOKIE_SECURE=true`。
 
 数据库保存于 `data/notebook.sqlite`（表 `users`、`sessions`、`notebooks`）。停止后端后备份整个 `data/` 目录。数据和 `.env` 不会提交到 GitHub。
+
+贴纸图片作为静态素材保存在 `public/assets/logos/`；每一天选了哪些贴纸，以及它们在日记页上的位置、大小和角度，会随该账号的笔记 JSON 一起写入 `notebooks` 表。无需单独建贴纸表或执行数据库迁移；备份时同时保留数据库目录和项目里的贴纸素材。
 
 GitHub Pages 只能托管静态页面，无法运行后端，因此线上预览无法登录。部署需要能运行 Node 的服务器、持久化磁盘和 HTTPS，并让前端与 `/api` 同域。
 

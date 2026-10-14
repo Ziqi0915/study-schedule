@@ -12,7 +12,7 @@ test('accounts keep separate notebooks that persist across restarts and reject s
  async function stop(){proc.kill();await once(proc,'exit')}
  const call=(method,path,{body,cookie,headers={}}={})=>fetch('http://localhost:4321/api/'+path,{method,headers:{...(body?{'Content-Type':'application/json'}:{}),...(cookie?{Cookie:cookie}:{}),...headers},body:body&&JSON.stringify(body)})
  const sessionOf=res=>res.headers.getSetCookie().find(c=>c.startsWith('schedule_sid=')).split(';')[0]
- const book={plans:{'2026-10-13':[{id:1,time:'09:00',title:'Read',done:false}]},journals:{'2026-10-13':'My private diary'},moods:{'2026-10-13':'🌱'}}
+ const book={plans:{'2026-10-13':[{id:1,time:'09:00',title:'Read',done:false}]},journals:{'2026-10-13':'My private diary'},moods:{'2026-10-13':'🌱'},stickers:{'2026-10-13':[{id:'sticker-1',key:'color/02_lemon',x:24,y:35,size:18,rotation:-3}]}}
  try {
   await start()
   assert.equal((await call('GET','me')).status,401)
@@ -27,6 +27,8 @@ test('accounts keep separate notebooks that persist across restarts and reject s
   assert.equal((await call('PUT','notebook',{cookie:ziqi,body:{book,revision:0}})).status,200)
   assert.equal((await call('PUT','notebook',{cookie:ziqi,body:{book,revision:0}})).status,409)
   assert.equal((await call('PUT','notebook',{cookie:ziqi,body:{book:{plans:[],journals:{}},revision:1}})).status,400)
+  const invalidStickerBook={...book,stickers:{...book.stickers,'2026-10-13':[{...book.stickers['2026-10-13'][0],key:'../../.env'}]}}
+  assert.equal((await call('PUT','notebook',{cookie:ziqi,body:{book:invalidStickerBook,revision:1}})).status,400)
   assert.equal((await call('PUT','notebook',{cookie:ziqi,body:{book,revision:1},headers:{Origin:'https://evil.example'}})).status,403)
   const other=sessionOf(await call('POST','register',{body:{username:'other',password:'other password'}}))
   assert.equal((await (await call('GET','notebook',{cookie:other})).json()).book,null)
