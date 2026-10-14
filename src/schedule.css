@@ -118,6 +118,36 @@ html[data-locale="en"],[data-locale="en"]{--font-display:'Literata',Georgia,'Tim
 .sticker-option-image{width:58px;height:58px;display:grid;place-items:center;border-radius:8px;background-color:#d3e9f455;background-image:linear-gradient(45deg,#5b9c7310 25%,transparent 25%,transparent 75%,#5b9c7310 75%),linear-gradient(45deg,#5b9c7310 25%,transparent 25%,transparent 75%,#5b9c7310 75%);background-position:0 0,7px 7px;background-size:14px 14px}
 .sticker-option img{width:52px;height:52px;object-fit:contain}
 .sticker-picker-hint{margin:0;padding:10px 22px 15px;border-top:1px solid #a89d8244;color:#414f5d99;font-size:10px}
+.jump-day{margin-left:auto;display:flex;align-items:center;gap:10px;color:#414f5d;font-size:12px;font-weight:600}
+.date-picker{position:relative}
+.date-picker-trigger{display:inline-flex;align-items:center;gap:8px;border:1px solid #ffffff;border-radius:999px;background:#fff;color:#414f5d;padding:4px 14px 4px 4px;font-size:13px;font-weight:600;box-shadow:0 8px 22px #414f5d12}
+.date-picker-trigger:hover{border-color:#5b9c73}
+.date-picker-glyph{width:30px;height:30px;border-radius:50%;background:#d3e9f4;color:#414f5d;display:grid;place-items:center}
+.date-picker-popover{position:absolute;z-index:30;top:calc(100% + 10px);right:0;width:300px;padding:14px 14px 12px;border:1px solid #fff;border-radius:20px;background:#f8f8f5;box-shadow:0 22px 50px #414f5d2a}
+.date-picker-nav{display:grid;grid-template-columns:32px 1fr 32px;align-items:center;gap:6px;margin-bottom:10px}
+.date-picker-nav strong{text-align:center;font:600 16px var(--font-display);color:#414f5d}
+.date-picker-nav button,.date-picker-today{border:0;background:#d3e9f4;color:#414f5d;cursor:pointer}
+.date-picker-nav button{width:32px;height:32px;border-radius:50%;font-size:20px;line-height:1}
+.date-picker-nav button:hover,.date-picker-today:hover{background:#c2ce8c}
+.date-picker-weekdays,.date-picker-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.date-picker-weekdays{margin-bottom:6px;color:#414f5d88;font-size:11px;font-weight:700;text-align:center}
+.date-picker-grid button{position:relative;height:36px;border:0;border-radius:12px;background:transparent;color:#414f5d;font:600 14px var(--font-display);cursor:pointer}
+.date-picker-grid button:hover{background:#d3e9f4}
+.date-picker-grid button.today{box-shadow:inset 0 0 0 1.5px #5b9c73}
+.date-picker-grid button.selected{background:#414f5d;color:#f5f3f1;box-shadow:none}
+.date-picker-grid button.marked:after{content:'';position:absolute;left:50%;bottom:5px;width:4px;height:4px;border-radius:50%;background:#5b9c73;transform:translateX(-50%)}
+.date-picker-grid button.selected.marked:after{background:#c2ce8c}
+.date-picker-today{display:block;width:100%;margin-top:10px;border-radius:12px;padding:8px;font-size:12px;font-weight:700}
+.week-tabs{gap:6px;padding:4px;border:0;border-radius:18px;background:#d3e9f455}
+.week-tabs button{gap:1px;padding:8px 2px 7px;border-radius:14px;transition:background .16s ease,color .16s ease,box-shadow .16s ease}
+.week-tabs button:hover{background:#ffffffcc}
+.week-tabs span{font-size:10px;font-weight:600;letter-spacing:.02em;opacity:.72}
+.week-tabs b{font-size:16px}
+.week-tabs button.active{background:#414f5d;color:#f5f3f1;box-shadow:0 8px 16px #414f5d22}
+.week-tabs button.is-today:not(.active) b{color:#2f7a52}
+.week-tabs button.is-today:not(.active):after{content:'';width:4px;height:4px;border-radius:50%;background:#5b9c73}
+@media(max-width:760px){.jump-day{margin-left:0;width:100%;justify-content:space-between}.date-picker-popover{right:auto;left:0;width:min(300px,calc(100vw - 36px))}}
+
 @media(max-width:760px){
   .diary-compose{min-height:352px}
   .diary-editor{padding:12px}

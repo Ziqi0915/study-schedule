@@ -38,10 +38,11 @@ export const dayName = (value, locale = DEFAULT_LOCALE) =>
 
 export const dayNumber = (value) => new Date(`${value}T12:00:00`).getDate()
 
-export function weekDates() {
+export function weekDates(anchor = today) {
+  const base = new Date(`${anchor}T12:00:00`)
   return Array.from({ length: 7 }, (_, i) => {
-    const date = new Date()
-    date.setDate(date.getDate() + i - 3)
+    const date = new Date(base)
+    date.setDate(base.getDate() + i - 3)
     return localDay(date)
   })
 }

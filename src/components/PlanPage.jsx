@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { t } from '../i18n'
-import { dayName, dayNumber, weekDates } from '../notebook'
+import { dayName, dayNumber, today, weekDates } from '../notebook'
 
 export default function PlanPage({ locale, book, selected, setSelected, dateLabel, weekday, updateBook }) {
   const [showForm, setShowForm] = useState(false)
@@ -9,7 +9,7 @@ export default function PlanPage({ locale, book, selected, setSelected, dateLabe
   const tasks = (book.plans[selected] || []).slice().sort((a, b) => a.time.localeCompare(b.time))
   const doneCount = tasks.filter((task) => task.done).length
   const progress = tasks.length ? Math.round((doneCount / tasks.length) * 100) : 0
-  const dates = weekDates()
+  const dates = weekDates(selected)
 
   function addTask() {
     if (!newTask.title.trim()) return
@@ -69,7 +69,7 @@ export default function PlanPage({ locale, book, selected, setSelected, dateLabe
         {dates.map((date) => (
           <button
             key={date}
-            className={selected === date ? 'active' : undefined}
+            className={[selected === date ? 'active' : '', date === today ? 'is-today' : ''].filter(Boolean).join(' ') || undefined}
             onClick={() => setSelected(date)}
           >
             <span>{dayName(date, locale)}</span>

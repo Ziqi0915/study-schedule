@@ -1,6 +1,24 @@
 import { LOCALE_OPTIONS, dateLocale, t } from '../i18n'
+import DatePicker from './DatePicker'
 import DiaryPage from './DiaryPage'
 import PlanPage from './PlanPage'
+
+function markedDays(book) {
+  const days = new Set()
+  for (const [date, list] of Object.entries(book.plans || {})) {
+    if (list?.length) days.add(date)
+  }
+  for (const [date, text] of Object.entries(book.journals || {})) {
+    if (String(text || '').trim()) days.add(date)
+  }
+  for (const [date, mood] of Object.entries(book.moods || {})) {
+    if (mood) days.add(date)
+  }
+  for (const [date, list] of Object.entries(book.stickers || {})) {
+    if (list?.length) days.add(date)
+  }
+  return days
+}
 
 export default function SchedulePage({ user, locale, book, selected, setSelected, syncStatus, logout, setLocale, updateBook }) {
   const selectedDate = new Date(`${selected}T12:00:00`)
@@ -52,16 +70,15 @@ export default function SchedulePage({ user, locale, book, selected, setSelected
       <main>
         <div className="sync-toolbar">
           <span role="status">{syncStatus}</span>
-          <label>
-            {t(locale, 'jumpToDay')}{' '}
-            <input
-              type="date"
+          <div className="jump-day">
+            <span>{t(locale, 'jumpToDay')}</span>
+            <DatePicker
+              locale={locale}
               value={selected}
-              onChange={(e) => setSelected(e.target.value)}
-              required
-              aria-label={t(locale, 'pickDate')}
+              onChange={setSelected}
+              markedDays={markedDays(book)}
             />
-          </label>
+          </div>
         </div>
         <section className="notebook-shell">
           <aside className="book-spine" aria-label={t(locale, 'spineLabel')}>
