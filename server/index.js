@@ -16,10 +16,14 @@ const cookieName = 'schedule_sid'
 
 mkdirSync(dirname(path), { recursive: true })
 const db = new DatabaseSync(path)
+const locales = new Set(['zh-Hans', 'zh-Hant', 'en'])
 db.exec(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;
-CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, username TEXT NOT NULL UNIQUE COLLATE NOCASE, password_hash TEXT NOT NULL, created_at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, username TEXT NOT NULL UNIQUE COLLATE NOCASE, password_hash TEXT NOT NULL, locale TEXT NOT NULL DEFAULT 'zh-Hans', created_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS sessions (token_hash TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, expires_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS notebooks (user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE, data TEXT NOT NULL, revision INTEGER NOT NULL);`)
+if (!db.prepare('PRAGMA table_info(users)').all().some((col) => col.name === 'locale')) {
+  db.exec(`ALTER TABLE users ADD COLUMN locale TEXT NOT NULL DEFAULT 'zh-Hans'`)
+}
 
 async function hashPassword(password) {
   const salt = randomBytes(16)
@@ -54,7 +58,7 @@ function startSession(userId) {
 function currentUser(req) {
   const token = readSession(req)
   if (!token) return null
-  return db.prepare('SELECT users.id, users.username FROM sessions JOIN users ON users.id = sessions.user_id WHERE token_hash = ? AND expires_at > ?').get(hashToken(token), Date.now()) || null
+  return db.prepare('SELECT users.id, users.username, users.locale FROM sessions JOIN users ON users.id = sessions.user_id WHERE token_hash = ? AND expires_at > ?').get(hashToken(token), Date.now()) || null
 }
 
 function sameOrigin(req) {
@@ -94,6 +98,13 @@ function readCredentials(body) {
   const password = typeof body.password === 'string' ? body.password : ''
   return { username, password }
 }
+function readLocale(body) {
+  const locale = typeof body.locale === 'string' ? body.locale : 'zh-Hans'
+  return locales.has(locale) ? locale : null
+}
+function publicUser(row) {
+  return { username: row.username, locale: locales.has(row.locale) ? row.locale : 'zh-Hans' }
+}
 
 const server = createServer(async (req, res) => {
   const reply = (code, data, headers = {}) => { res.writeHead(code, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...headers }); res.end(JSON.stringify(data)) }
@@ -103,22 +114,25 @@ const server = createServer(async (req, res) => {
   try {
     if (route === 'POST /api/register') {
       if (!allowRegistration) return reply(403, { error: '暂未开放注册' })
-      const { username, password } = readCredentials(await readJson(req))
+      const body = await readJson(req)
+      const { username, password } = readCredentials(body)
+      const locale = readLocale(body)
       if (!/^[\p{L}\p{N}_.-]{2,32}$/u.test(username)) return reply(400, { error: '用户名需为 2–32 位，可用中英文、数字、下划线、点和短横线' })
       if (password.length < 8 || password.length > 128) return reply(400, { error: '密码长度需为 8–128 位' })
+      if (!locale) return reply(400, { error: '请选择界面语言：简体、繁体或英文' })
       if (db.prepare('SELECT 1 FROM users WHERE username = ?').get(username)) return reply(409, { error: '这个用户名已被注册' })
-      const { lastInsertRowid } = db.prepare('INSERT INTO users (username, password_hash, created_at) VALUES (?, ?, ?)').run(username, await hashPassword(password), Date.now())
-      return reply(201, { user: { username } }, { 'Set-Cookie': startSession(Number(lastInsertRowid)) })
+      const { lastInsertRowid } = db.prepare('INSERT INTO users (username, password_hash, locale, created_at) VALUES (?, ?, ?, ?)').run(username, await hashPassword(password), locale, Date.now())
+      return reply(201, { user: { username, locale } }, { 'Set-Cookie': startSession(Number(lastInsertRowid)) })
     }
     if (route === 'POST /api/login') {
       const { username, password } = readCredentials(await readJson(req))
       const key = `${req.socket.remoteAddress}|${username.toLowerCase()}`
       if (isLocked(key)) return reply(429, { error: '尝试次数过多，请 15 分钟后再试' })
-      const user = db.prepare('SELECT id, username, password_hash FROM users WHERE username = ?').get(username)
+      const user = db.prepare('SELECT id, username, password_hash, locale FROM users WHERE username = ?').get(username)
       const ok = await verifyPassword(password, user?.password_hash || dummyHash)
       if (!user || !ok) { recordFailure(key); return reply(401, { error: '用户名或密码错误' }) }
       failures.delete(key)
-      return reply(200, { user: { username: user.username } }, { 'Set-Cookie': startSession(user.id) })
+      return reply(200, { user: publicUser(user) }, { 'Set-Cookie': startSession(user.id) })
     }
     if (route === 'POST /api/logout') {
       const token = readSession(req)
@@ -127,7 +141,14 @@ const server = createServer(async (req, res) => {
     }
 
     const user = currentUser(req)
-    if (route === 'GET /api/me') return user ? reply(200, { user: { username: user.username } }) : reply(401, { error: '请先登录' })
+    if (route === 'GET /api/me') return user ? reply(200, { user: publicUser(user) }) : reply(401, { error: '请先登录' })
+    if (route === 'PUT /api/locale') {
+      if (!user) return reply(401, { error: '登录已过期，请重新登录' })
+      const locale = readLocale(await readJson(req))
+      if (!locale) return reply(400, { error: '请选择界面语言：简体、繁体或英文' })
+      db.prepare('UPDATE users SET locale = ? WHERE id = ?').run(locale, user.id)
+      return reply(200, { user: { username: user.username, locale } })
+    }
     if (route === 'GET /api/notebook' || route === 'PUT /api/notebook') {
       if (!user) return reply(401, { error: '登录已过期，请重新登录' })
       const row = db.prepare('SELECT data, revision FROM notebooks WHERE user_id = ?').get(user.id)

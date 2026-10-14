@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react'
+import { t } from '../i18n'
 import { STICKER_CATALOG } from '../stickerCatalog'
 
-const categories = [
-  { id: 'color', label: '彩色贴纸' },
-  { id: 'doodle', label: '手绘涂鸦' },
-]
-
-export default function StickerPicker({ onChoose, onClose }) {
+export default function StickerPicker({ locale, onChoose, onClose }) {
   const [category, setCategory] = useState('color')
+  const categories = [
+    { id: 'color', label: t(locale, 'catColor') },
+    { id: 'doodle', label: t(locale, 'catDoodle') },
+  ]
   const stickers = useMemo(() => STICKER_CATALOG.filter((sticker) => sticker.group === category), [category])
 
   return (
@@ -17,12 +17,12 @@ export default function StickerPicker({ onChoose, onClose }) {
       <section className="sticker-picker" role="dialog" aria-modal="true" aria-labelledby="sticker-picker-title">
         <header className="sticker-picker-heading">
           <div>
-            <span className="date-kicker">装点今天这一页</span>
-            <h3 id="sticker-picker-title">选一张贴纸</h3>
+            <span className="date-kicker">{t(locale, 'pickerKicker')}</span>
+            <h3 id="sticker-picker-title">{t(locale, 'pickerTitle')}</h3>
           </div>
-          <button className="sticker-picker-close" type="button" aria-label="关闭贴纸选择" onClick={onClose}>×</button>
+          <button className="sticker-picker-close" type="button" aria-label={t(locale, 'pickerClose')} onClick={onClose}>×</button>
         </header>
-        <div className="sticker-picker-tabs" role="tablist" aria-label="贴纸分类">
+        <div className="sticker-picker-tabs" role="tablist" aria-label={t(locale, 'pickerCats')}>
           {categories.map((item) => (
             <button
               type="button"
@@ -44,7 +44,7 @@ export default function StickerPicker({ onChoose, onClose }) {
             </button>
           ))}
         </div>
-        <p className="sticker-picker-hint">选中后会贴到日记页；按住贴纸可以移动。</p>
+        <p className="sticker-picker-hint">{t(locale, 'pickerHint')}</p>
       </section>
     </div>
   )

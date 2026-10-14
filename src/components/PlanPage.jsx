@@ -1,7 +1,8 @@
 import { useState } from 'react'
+import { t } from '../i18n'
 import { dayName, dayNumber, weekDates } from '../notebook'
 
-export default function PlanPage({ book, selected, setSelected, dateLabel, weekday, updateBook }) {
+export default function PlanPage({ locale, book, selected, setSelected, dateLabel, weekday, updateBook }) {
   const [showForm, setShowForm] = useState(false)
   const [newTask, setNewTask] = useState({ time: '09:00', title: '', note: '' })
 
@@ -34,7 +35,7 @@ export default function PlanPage({ book, selected, setSelected, dateLabel, weekd
   }
 
   function clearDay() {
-    if (confirm('清除今天的全部学习计划？')) {
+    if (confirm(t(locale, 'clearConfirm'))) {
       updateBook((prev) => ({ ...prev, plans: { ...prev.plans, [selected]: [] } }))
     }
   }
@@ -58,10 +59,10 @@ export default function PlanPage({ book, selected, setSelected, dateLabel, weekd
           <span className="date-kicker">
             {weekday} · {dateLabel}
           </span>
-          <h2>今日计划</h2>
+          <h2>{t(locale, 'planTitle')}</h2>
         </div>
         <button className="clear" onClick={clearDay}>
-          清除
+          {t(locale, 'clear')}
         </button>
       </div>
       <div className="week-tabs">
@@ -71,14 +72,14 @@ export default function PlanPage({ book, selected, setSelected, dateLabel, weekd
             className={selected === date ? 'active' : undefined}
             onClick={() => setSelected(date)}
           >
-            <span>{dayName(date)}</span>
+            <span>{dayName(date, locale)}</span>
             <b>{dayNumber(date)}</b>
           </button>
         ))}
       </div>
       <div className="progress-line">
         <span>
-          今天完成了 {doneCount} / {tasks.length} 件小事
+          {t(locale, 'progress', doneCount, tasks.length)}
         </span>
         <b>{progress}%</b>
         <i>
@@ -86,7 +87,7 @@ export default function PlanPage({ book, selected, setSelected, dateLabel, weekd
         </i>
       </div>
       <div className="plans">
-        {!tasks.length && <div className="empty">这一页还很空，写下一个小目标吧。</div>}
+        {!tasks.length && <div className="empty">{t(locale, 'emptyPlans')}</div>}
         {tasks.map((task) => (
           <article key={task.id} className={`plan-row${task.done ? ' done' : ''}`}>
             <button className="check" onClick={() => toggleDone(task.id)}>
@@ -104,33 +105,30 @@ export default function PlanPage({ book, selected, setSelected, dateLabel, weekd
         ))}
       </div>
       <button className="add-plan" onClick={() => setShowForm((v) => !v)}>
-        ＋ 添加一个时间段
+        {t(locale, 'addSlot')}
       </button>
       {showForm && (
         <div className="task-form">
           <input
             type="time"
             value={newTask.time}
-            onChange={(e) => setNewTask((t) => ({ ...t, time: e.target.value }))}
+            onChange={(e) => setNewTask((t0) => ({ ...t0, time: e.target.value }))}
           />
           <input
             value={newTask.title}
-            onChange={(e) => setNewTask((t) => ({ ...t, title: e.target.value }))}
-            placeholder="要完成什么？"
+            onChange={(e) => setNewTask((t0) => ({ ...t0, title: e.target.value }))}
+            placeholder={t(locale, 'taskWhat')}
             onKeyUp={(e) => e.key === 'Enter' && addTask()}
           />
           <input
             value={newTask.note}
-            onChange={(e) => setNewTask((t) => ({ ...t, note: e.target.value }))}
-            placeholder="给自己的一句提示（可选）"
+            onChange={(e) => setNewTask((t0) => ({ ...t0, note: e.target.value }))}
+            placeholder={t(locale, 'taskHint')}
             onKeyUp={(e) => e.key === 'Enter' && addTask()}
           />
-          <button onClick={addTask}>写进计划</button>
+          <button onClick={addTask}>{t(locale, 'savePlan')}</button>
         </div>
       )}
-      <div className="page-doodle">
-        ✦　✧　✦<small>今天也加油</small>
-      </div>
     </div>
   )
 }

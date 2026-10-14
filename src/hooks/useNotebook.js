@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '../api'
+import { DEFAULT_LOCALE, normalizeLocale, t } from '../i18n'
 import { legacyKey, legacyNotebook, starter, today } from '../notebook'
 
 export function useNotebook() {
   const [phase, setPhase] = useState('checking')
   const [user, setUser] = useState(null)
   const [notice, setNotice] = useState('')
-  const [book, setBook] = useState(starter)
+  const [book, setBook] = useState(() => starter())
   const [selected, setSelected] = useState(today)
   const [syncStatus, setSyncStatus] = useState('')
 
@@ -19,6 +20,7 @@ export function useNotebook() {
   const phaseRef = useRef(phase)
   const bookRef = useRef(book)
   const saveRemoteRef = useRef(null)
+  const localeRef = useRef(DEFAULT_LOCALE)
 
   useEffect(() => { phaseRef.current = phase }, [phase])
 
@@ -34,6 +36,7 @@ export function useNotebook() {
     dirtyRef.current = false
     setNotice(message)
     setUser(null)
+    localeRef.current = DEFAULT_LOCALE
     setPhase('auth')
   }, [])
 
@@ -44,25 +47,26 @@ export function useNotebook() {
     }
     clearTimeout(timerRef.current)
     savingRef.current = true
-    setSyncStatus('正在保存…')
+    const locale = localeRef.current
+    setSyncStatus(t(locale, 'syncSaving'))
     try {
       const result = await api('PUT', 'notebook', { book: bookRef.current, revision: revisionRef.current })
       revisionRef.current = result.revision
       dirtyRef.current = false
-      setSyncStatus('已保存')
+      setSyncStatus(t(locale, 'syncSaved'))
       return true
     } catch (e) {
-      if (e.status === 401) signedOut('登录已过期，请重新登录')
+      if (e.status === 401) signedOut(t(locale, 'sessionExpired'))
       else if (e.status === 409) {
         const latest = await api('GET', 'notebook').catch(() => null)
         if (latest) {
           revisionRef.current = latest.revision
           dirtyRef.current = false
-          replaceBook(latest.book || starter())
+          replaceBook(latest.book || starter(locale))
         }
-        setSyncStatus('笔记已在其他设备上更新，已载入最新内容')
+        setSyncStatus(t(locale, 'syncConflict'))
       } else {
-        setSyncStatus(e.message + '，稍后自动重试')
+        setSyncStatus(t(locale, 'syncRetry', e.message))
         timerRef.current = setTimeout(() => { saveRemoteRef.current?.() }, 5000)
       }
       return false
@@ -78,20 +82,22 @@ export function useNotebook() {
   useEffect(() => { saveRemoteRef.current = saveRemote }, [saveRemote])
 
   const enter = useCallback(async (u) => {
-    setUser(u)
+    const locale = normalizeLocale(u?.locale)
+    localeRef.current = locale
+    setUser({ ...u, locale })
     setNotice('')
     try {
       const result = await api('GET', 'notebook')
       revisionRef.current = result.revision
       const legacy = result.book ? null : legacyNotebook()
-      const notebook = result.book || legacy || starter()
+      const notebook = result.book || legacy || starter(locale)
       setSelected(today)
       loadingRef.current = true
       bookRef.current = notebook
       setBook(notebook)
       setPhase('app')
       if (result.book) {
-        setSyncStatus('已同步')
+        setSyncStatus(t(locale, 'syncSynced'))
         queueMicrotask(() => { loadingRef.current = false })
       } else {
         const saved = await saveRemote()
@@ -99,7 +105,7 @@ export function useNotebook() {
         loadingRef.current = false
       }
     } catch (e) {
-      signedOut(e.status === 401 ? '登录已过期，请重新登录' : e.message)
+      signedOut(e.status === 401 ? t(locale, 'sessionExpired') : e.message)
     }
   }, [saveRemote, signedOut])
 
@@ -110,6 +116,25 @@ export function useNotebook() {
     replaceBook(starter())
     revisionRef.current = 0
   }, [replaceBook, saveRemote, signedOut])
+
+  const setLocale = useCallback(async (nextLocale) => {
+    const locale = normalizeLocale(nextLocale)
+    if (locale === localeRef.current) return
+    const previous = localeRef.current
+    localeRef.current = locale
+    setUser((u) => (u ? { ...u, locale } : u))
+    try {
+      const { user: saved } = await api('PUT', 'locale', { locale })
+      const confirmed = normalizeLocale(saved?.locale)
+      localeRef.current = confirmed
+      setUser((u) => (u ? { ...u, locale: confirmed } : u))
+    } catch (e) {
+      localeRef.current = previous
+      setUser((u) => (u ? { ...u, locale: previous } : u))
+      if (e.status === 401) signedOut(t(previous, 'sessionExpired'))
+      else setSyncStatus(t(previous, 'syncRetry', e.message))
+    }
+  }, [signedOut])
 
   const updateBook = useCallback((updater) => {
     setBook((prev) => {
@@ -122,7 +147,7 @@ export function useNotebook() {
   useEffect(() => {
     if (loadingRef.current || phaseRef.current !== 'app') return
     dirtyRef.current = true
-    setSyncStatus('有未保存的修改')
+    setSyncStatus(t(localeRef.current, 'syncDirty'))
     clearTimeout(timerRef.current)
     timerRef.current = setTimeout(() => { saveRemoteRef.current?.() }, 600)
   }, [book])
@@ -160,6 +185,7 @@ export function useNotebook() {
     syncStatus,
     enter,
     logout,
+    setLocale,
     updateBook,
   }
 }

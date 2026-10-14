@@ -1,3 +1,5 @@
+import { DEFAULT_LOCALE, dateLocale, messagesFor, normalizeLocale } from './i18n'
+
 export const legacyKey = 'study-notebook-v2'
 
 export const localDay = (d) =>
@@ -5,16 +7,17 @@ export const localDay = (d) =>
 
 export const today = localDay(new Date())
 
-export function starter() {
+export function starter(locale = DEFAULT_LOCALE) {
+  const copy = messagesFor(locale)
   return {
     plans: {
-      [today]: [
-        { id: 1, time: '08:30', title: '英语听力 30 分钟', note: '通勤时完成一组练习', done: false },
-        { id: 2, time: '10:00', title: 'React 组件复习', note: '整理 useState 与 useEffect', done: false },
-        { id: 3, time: '19:30', title: '阅读与今日复盘', note: '写下三条今天学到的内容', done: false },
-      ],
+      [today]: copy.starterPlans.map((task, index) => ({
+        id: index + 1,
+        ...task,
+        done: false,
+      })),
     },
-    journals: { [today]: '今天想把时间留给真正重要的事情。' },
+    journals: { [today]: copy.starterJournal },
     moods: {},
     stickers: {},
   }
@@ -30,8 +33,8 @@ export function legacyNotebook() {
   }
 }
 
-export const dayName = (value) =>
-  new Date(`${value}T12:00:00`).toLocaleDateString('zh-CN', { weekday: 'short' })
+export const dayName = (value, locale = DEFAULT_LOCALE) =>
+  new Date(`${value}T12:00:00`).toLocaleDateString(dateLocale(normalizeLocale(locale)), { weekday: 'short' })
 
 export const dayNumber = (value) => new Date(`${value}T12:00:00`).getDate()
 
