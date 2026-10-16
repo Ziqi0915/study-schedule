@@ -1,0 +1,105 @@
+name: Deploy frontend to Baota
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: baota-frontend-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DEPLOY_HOST: 150.158.108.119
+      DEPLOY_USER: root
+      DEPLOY_PORT: "22"
+      DEPLOY_DIR: /www/wwwroot/study-schedule/dist
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Test
+        run: npm test
+      - name: Build frontend
+        run: npm run build
+      - name: Validate build
+        run: |
+          test -s dist/index.html
+          test -d dist/assets
+          node --input-type=module <<'JS'
+          import { readFileSync, existsSync } from 'node:fs';
+          const html = readFileSync('dist/index.html', 'utf8');
+          const refs = [...html.matchAll(/(?:src|href)=["']([^"']+\.(?:js|css)(?:\?[^"']*)?)["']/g)];
+          if (!refs.length) throw new Error('No built JS/CSS references found');
+          for (const [, ref] of refs) {
+            const path = 'dist/' + ref.replace(/^\//, '').replace(/^\.\//, '').split('?')[0];
+            if (!existsSync(path)) throw new Error('Missing built asset: ' + path);
+          }
+          JS
+      - name: Set up SSH
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.BAOTA_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.BAOTA_SSH_KNOWN_HOSTS }}
+        run: |
+          test -n "$SSH_PRIVATE_KEY" || { echo "Missing BAOTA_SSH_PRIVATE_KEY secret"; exit 1; }
+          test -n "$SSH_KNOWN_HOSTS" || { echo "Missing BAOTA_SSH_KNOWN_HOSTS secret"; exit 1; }
+          install -m 700 -d "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" > "$HOME/.ssh/baota_deploy"
+          chmod 600 "$HOME/.ssh/baota_deploy"
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+          cat > "$HOME/.ssh/config" <<EOF
+          Host baota
+            HostName $DEPLOY_HOST
+            User $DEPLOY_USER
+            Port $DEPLOY_PORT
+            IdentityFile ~/.ssh/baota_deploy
+            IdentitiesOnly yes
+            BatchMode yes
+            StrictHostKeyChecking yes
+            ConnectTimeout 15
+          EOF
+          chmod 600 "$HOME/.ssh/config"
+      - name: Check target and back up page entry
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: |
+          ssh baota 'bash -s' <<'SH'
+          set -euo pipefail
+          target=/www/wwwroot/study-schedule/dist
+          test -d "$target"
+          test -f "$target/index.html"
+          command -v rsync >/dev/null
+          backup="/root/study-schedule-deploy-backups/$(date -u +%Y%m%dT%H%M%SZ)-$$"
+          mkdir -p "$backup"
+          cp "$target/index.html" "$backup/index.html"
+          echo "Previous page entry backed up to $backup/index.html"
+          SH
+      - name: Upload assets first
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: |
+          rsync -rtz --chmod=D755,F644 --exclude='/index.html' \
+            -e ssh dist/ "baota:$DEPLOY_DIR/"
+      - name: Publish page entry last
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: |
+          rsync -rtz --chmod=F644 -e ssh dist/index.html "baota:$DEPLOY_DIR/index.html"
+          local_hash="$(sha256sum dist/index.html | cut -d ' ' -f1)"
+          remote_hash="$(ssh baota "sha256sum '$DEPLOY_DIR/index.html'" | cut -d ' ' -f1)"
+          test "$local_hash" = "$remote_hash"
+      - name: Clean up SSH key
+        if: always()
+        run: rm -f "$HOME/.ssh/baota_deploy"
