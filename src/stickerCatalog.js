@@ -20,12 +20,14 @@ const doodleNames = {
   '30_friends': '朋友',
 }
 
+const assetBase = import.meta.env?.BASE_URL ?? '/'
+
 function entries(group, names) {
   return Object.entries(names).map(([name, title]) => ({
     id: `${group}/${name}`,
     title,
     group,
-    src: `/assets/logos/${group}/${name}.png`,
+    src: `${assetBase}assets/logos/${group}/${name}.png`,
   }))
 }
 
